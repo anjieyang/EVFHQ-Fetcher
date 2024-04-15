@@ -1,46 +1,59 @@
 import psycopg2
 from datetime import datetime
 from googleapiclient.discovery import build
+from tqdm import tqdm
 
-api_key = "AIzaSyCOtDaqPcHyye3hsNB-5IWSQeAl34J-BGk"
+from config import API_KEY, DB_NAME, DB_USER, DB_PASSWORD
+
+api_key = API_KEY
 youtube = build("youtube", "v3", developerKey=api_key)
 
 
 def connect_db():
-    """Connect to the PostgreSQL database."""
-    return psycopg2.connect("dbname='youtube_data' user='anjieyang' password='yaj000209'")
+    return psycopg2.connect(f"dbname={DB_NAME} user={DB_USER} password={DB_PASSWORD}")
 
 
 def add_video_details(cursor, videos_info, search_keyword):
-    """Insert video data into the database."""
+    success_count = 0
     for video in videos_info:
-        cursor.execute("""
-            INSERT INTO videos (video_id, title, length, resolution, upload_date, youtuber, description, search_keyword) 
-            VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
-            ON CONFLICT (video_id) DO NOTHING
-        """, (
-            video['video_id'], video['title'], video['duration'], video['definition'],
-            datetime.now().date(
-            ), video['channel_title'], video['description'], search_keyword
-        ))
+        try:
+            cursor.execute("""
+                INSERT INTO videos (video_id, title, length, resolution, upload_date, youtuber, description, search_keyword) 
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+                ON CONFLICT (video_id) DO NOTHING
+            """, (
+                video['video_id'], video['title'], video['duration'], video['definition'],
+                datetime.now().date(
+                ), video['channel_title'], video['description'], search_keyword
+            ))
+            if cursor.rowcount > 0:
+                success_count += 1
+        except Exception as e:
+            print(f"Error inserting video {video['video_id']}: {e}")
+    return success_count
 
 
-def get_video_details(video_ids):
-    """Fetch video details from the YouTube Data API."""
-    try:
-        details_request = youtube.videos().list(
-            part="snippet,contentDetails",
-            id=",".join(video_ids)
-        )
-        details_response = details_request.execute()
-        return parse_video_details(details_response)
-    except Exception as e:
-        print(f"Failed to fetch video details: {e}")
-        return []
+def get_video_details(video_ids, max_results):
+    successful_details = []
+    failed_ids = []
+    for video_id in tqdm(video_ids, total=max_results, desc="Fetching video details"):
+        try:
+            details_request = youtube.videos().list(
+                part="snippet,contentDetails", id=video_id)
+            details_response = details_request.execute()
+            if details_response.get('items', []):
+                successful_details.extend(
+                    parse_video_details(details_response))
+            else:
+                print(f"No details found for video ID: {video_id}")
+                failed_ids.append(video_id)
+        except Exception as e:
+            print(f"Failed to fetch video details for {video_id}: {e}")
+            failed_ids.append(video_id)
+    return successful_details, failed_ids
 
 
 def parse_video_details(details_response):
-    """Parse the video details from YouTube API response."""
     videos_info = []
     for item in details_response.get('items', []):
         video_info = {
@@ -49,7 +62,6 @@ def parse_video_details(details_response):
             'description': item['snippet']['description'],
             'channel_title': item['snippet']['channelTitle'],
             'duration': item['contentDetails']['duration'],
-            # Ensure 'hd' or 'sd' is captured
             'definition': item['contentDetails'].get('definition', 'sd')
         }
         videos_info.append(video_info)
@@ -57,18 +69,12 @@ def parse_video_details(details_response):
 
 
 def fetch_and_store_videos(query, max_results):
-    """Fetch video IDs from YouTube API and store details in database."""
     conn = connect_db()
     cursor = conn.cursor()
     try:
         video_ids = []
-        request = youtube.search().list(
-            part="snippet",
-            maxResults=50,
-            q=query,
-            type='video'
-        )
-        while request:
+        request = youtube.search().list(part="snippet", maxResults=50, q=query, type='video')
+        while request and len(video_ids) < max_results:
             response = request.execute()
             video_ids.extend([item['id']['videoId']
                              for item in response.get('items', [])])
@@ -76,9 +82,12 @@ def fetch_and_store_videos(query, max_results):
                 break
             request = youtube.search().list_next(request, response)
 
-        videos_info = get_video_details(video_ids)
-        add_video_details(cursor, videos_info, query)
+        video_details, failed_ids = get_video_details(video_ids, max_results)
+        success_count = add_video_details(
+            cursor, video_details, query)
         conn.commit()
+        print(
+            f"Total processed: {len(video_ids)}, Successfully inserted: {success_count}.")
     except Exception as e:
         print(f"Error during fetching and storing videos: {e}")
     finally:
@@ -87,6 +96,6 @@ def fetch_and_store_videos(query, max_results):
 
 
 if __name__ == "__main__":
-    search_query = "technology reviews"
-    number_of_videos = 1
+    search_query = "talk shows"
+    number_of_videos = 150
     fetch_and_store_videos(search_query, number_of_videos)
