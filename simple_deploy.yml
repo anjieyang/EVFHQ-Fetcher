@@ -1,0 +1,21 @@
+version: "3.8"
+services:
+  evfhq-fetcher:
+    image: anjieyang/evfhq-fetcher
+    ports:
+      - "8000:8000"
+    environment:
+      DB_HOST: your_db_host
+      DB_NAME: your_db_name
+      DB_USER: your_db_user
+      DB_PASSWORD: your_db_password
+      DB_PORT: your_db_port
+      API_KEY: "your_api_key"
+      SEARCH_QUERY: "your_search_query"
+      NUMBER_OF_VIDEOS: "your_number_of_videos"
+
+volumes:
+  postgres-data:
+
+networks:
+  default:
