@@ -25,15 +25,15 @@ jobs:
           --health-retries 5
 
     steps:
-      - uses: actions/checkout@v2 # Checkout code from the Git repository
+      - uses: actions/checkout@v2
 
       - name: Set up Python
-        uses: actions/setup-python@v2 # Setup Python environment
+        uses: actions/setup-python@v2
         with:
-          python-version: 3.10
+          python-version: "3.10.14" # Explicitly specify Python 3.10.14
 
       - name: Build Docker Image
-        run: docker build -t yourusername/yourimagename . # Build Docker image using Dockerfile in repository
+        run: docker build -t yourusername/yourimagename .
 
       - name: Run Docker Compose
         run: |
