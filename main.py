@@ -2,15 +2,23 @@ import psycopg2
 from datetime import datetime
 from googleapiclient.discovery import build
 from tqdm import tqdm
+import os
 
-from config import API_KEY, DB_NAME, DB_USER, DB_PASSWORD
 
-api_key = API_KEY
+api_key = os.getenv('API_KEY')
+if not api_key:
+    raise Exception("API_KEY environment variable not set")
 youtube = build("youtube", "v3", developerKey=api_key)
 
 
 def connect_db():
-    return psycopg2.connect(f"dbname={DB_NAME} user={DB_USER} password={DB_PASSWORD}")
+    return psycopg2.connect(
+        dbname=os.getenv('DB_NAME'),
+        user=os.getenv('DB_USER'),
+        password=os.getenv('DB_PASSWORD'),
+        host=os.getenv('DB_HOST'),
+        port=os.getenv('DB_PORT')
+    )
 
 
 def add_video_details(cursor, videos_info, search_keyword):
@@ -109,6 +117,6 @@ def fetch_and_store_videos(query, max_results):
 
 
 if __name__ == "__main__":
-    search_query = "talk shows"
-    number_of_videos = 150
+    search_query = os.getenv('SEARCH_QUERY')
+    number_of_videos = int(os.getenv('NUMBER_OF_VIDEOS'))
     fetch_and_store_videos(search_query, number_of_videos)

@@ -1,0 +1,32 @@
+version: '3.8'
+services:
+  web:
+    build: .
+    ports:
+      - "8000:8000"
+    environment:
+      DB_HOST: your_db_host
+      DB_NAME: your_db_name
+      DB_USER: your_user
+      DB_PASSWORD: your_password
+      DB_PORT: your_port
+      API_KEY: your_api_key
+      SEARCH_QUERY: "your_search_query"
+      NUMBER_OF_VIDEOS: "your_number_of_videos"
+    depends_on:
+      - postgres
+
+  postgres:
+    image: postgres:latest
+    environment:
+      POSTGRES_DB: your_postgres_db
+      POSTGRES_USER: your_postgres_user
+      POSTGRES_PASSWORD: your_postgres_password
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+
+volumes:
+  postgres-data:
+
+networks:
+  default:
