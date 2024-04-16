@@ -4,7 +4,7 @@ EVFHQ-Fetcher is responsible for automatically gathering and storing metadata re
 
 ## DockerHub Repository
 
-You can find the Docker image for EVFHQ-Fetcher on DockerHub: [anjieyang/evfhq-fetcher](https://hub.docker.com/repository/docker/anjieyang/evfhq-fetcher/general)
+You can find the [Docker image](https://hub.docker.com/repository/docker/anjieyang/evfhq-fetcher/general) for EVFHQ-Fetcher on DockerHub.
 
 ## Deployment Configurations
 
