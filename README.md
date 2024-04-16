@@ -10,13 +10,13 @@ You can find the Docker image for EVFHQ-Fetcher on DockerHub: [anjieyang/evfhq-f
 
 ### Local Build Deployment with Docker Compose
 
-For deploying EVFHQ-Fetcher using Docker Compose and building the Docker image locally, you can use the provided `docker-compose.yml` file in the root directory of this repository.
+For deploying EVFHQ-Fetcher using Docker Compose and building the Docker image locally, you can use the provided `docker-compose.yml` file.
 
 ### DockerHub Deployment
 
 If you prefer a quick and straightforward deployment using the Docker image from DockerHub.
 
-1. Download the `dockerhub_deploy.yml` file from the `dockerhub_deploy` folder.
+1. Download [dockerhub_deploy.yml](https://drive.google.com/uc?export=download&id=1-GZPdvvrCp6mchBnhhnq6-rRr0VpD7qr).
 
 2. Replace the placeholder values (`your_db_host`, `your_db_name`, `your_db_user`, `your_db_password`, `your_db_port`, `your_api_key`, `your_search_query`, `your_number_of_videos`) with your actual configurations.
 
