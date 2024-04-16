@@ -1,0 +1,73 @@
+name: CI/CD Pipeline for Python Docker Application
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:12
+        env:
+          POSTGRES_USER: ${{ secrets.POSTGRES_USER }}
+          POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
+          POSTGRES_DB: ${{ secrets.POSTGRES_DB }}
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Set up Python
+        uses: actions/setup-python@v2
+        with:
+          python-version: 3.10
+
+      - name: Build Docker Image
+        run: docker build -t anjieyang/evfhq-fetcher .
+
+      - name: Run Docker Compose
+        run: |
+          docker-compose up -d
+          sleep 10  # Ensuring services are up and running
+
+      - name: Set up Database Schema
+        run: |
+          docker run -it --rm --network host postgres:12 psql -h localhost -U ${{ secrets.POSTGRES_USER }} -d ${{ secrets.POSTGRES_DB }} -c "
+            CREATE TABLE IF NOT EXISTS videos (
+              video_id VARCHAR(255) PRIMARY KEY,
+              title TEXT,
+              length INTERVAL,
+              resolution VARCHAR(50),
+              upload_date DATE,
+              youtuber TEXT,
+              description TEXT,
+              search_keyword TEXT,
+              location TEXT DEFAULT NULL,
+              server_id INTEGER DEFAULT NULL
+            );"
+
+      - name: Run Tests
+        run: |
+          # Implement your testing script or command here
+          echo "Run tests here"
+
+      - name: Push to Docker Registry
+        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+        run: |
+          echo "${{ secrets.DOCKER_HUB_PASSWORD }}" | docker login -u anjieyang --password-stdin
+          docker tag anjieyang/evfhq-fetcher anjieyang/evfhq-fetcher:${{ github.sha }}
+          docker push anjieyang/evfhq-fetcher:${{ github.sha }}
+
+      - name: Deploy
+        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+        run:
