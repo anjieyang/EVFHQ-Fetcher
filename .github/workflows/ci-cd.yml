@@ -1,4 +1,4 @@
-name: CI/CD Pipeline for Python Docker Application
+name: EVFHQ-Fetcher CI/CD
 
 on:
   push:
@@ -25,15 +25,15 @@ jobs:
           --health-retries 5
 
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v2 # Checkout code from the Git repository
 
       - name: Set up Python
-        uses: actions/setup-python@v2
+        uses: actions/setup-python@v2 # Setup Python environment
         with:
           python-version: 3.10
 
       - name: Build Docker Image
-        run: docker build -t anjieyang/evfhq-fetcher .
+        run: docker build -t yourusername/yourimagename . # Build Docker image using Dockerfile in repository
 
       - name: Run Docker Compose
         run: |
@@ -62,12 +62,12 @@ jobs:
           echo "Run tests here"
 
       - name: Push to Docker Registry
-        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
         run: |
-          echo "${{ secrets.DOCKER_HUB_PASSWORD }}" | docker login -u anjieyang --password-stdin
-          docker tag anjieyang/evfhq-fetcher anjieyang/evfhq-fetcher:${{ github.sha }}
-          docker push anjieyang/evfhq-fetcher:${{ github.sha }}
+          echo "${{ secrets.DOCKER_HUB_PASSWORD }}" | docker login -u yourusername --password-stdin
+          docker tag yourusername/yourimagename yourusername/yourimagename:${{ github.sha }}
+          docker push yourusername/yourimagename:${{ github.sha }}
 
       - name: Deploy
-        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
-        run:
+        run: |
+          # Add deployment scripts here
+          echo "Deploy scripts or commands go here"
