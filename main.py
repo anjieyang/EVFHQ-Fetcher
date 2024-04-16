@@ -33,7 +33,16 @@ def add_video_details(cursor, videos_info, search_keyword):
     return success_count
 
 
-def get_video_details(video_ids, max_results):
+def delete_video(cursor, video_id):
+    try:
+        cursor.execute("DELETE FROM videos WHERE video_id = %s", (video_id,))
+        print(
+            f"Deleted video {video_id} from database due to resolution constraints.")
+    except Exception as e:
+        print(f"Error deleting video {video_id}: {e}")
+
+
+def get_video_details(cursor, video_ids, max_results):
     successful_details = []
     failed_ids = []
     for video_id in tqdm(video_ids, total=max_results, desc="Fetching video details"):
@@ -42,8 +51,11 @@ def get_video_details(video_ids, max_results):
                 part="snippet,contentDetails", id=video_id)
             details_response = details_request.execute()
             if details_response.get('items', []):
-                successful_details.extend(
-                    parse_video_details(details_response))
+                video_details = parse_video_details(details_response)
+                if video_details[0]['definition'] not in ['hd', 'sd']:
+                    delete_video(cursor, video_id)
+                else:
+                    successful_details.extend(video_details)
             else:
                 print(f"No details found for video ID: {video_id}")
                 failed_ids.append(video_id)
@@ -56,13 +68,14 @@ def get_video_details(video_ids, max_results):
 def parse_video_details(details_response):
     videos_info = []
     for item in details_response.get('items', []):
+        definition = item['contentDetails'].get('definition', 'none')
         video_info = {
             'video_id': item['id'],
             'title': item['snippet']['title'],
             'description': item['snippet']['description'],
             'channel_title': item['snippet']['channelTitle'],
             'duration': item['contentDetails']['duration'],
-            'definition': item['contentDetails'].get('definition', 'sd')
+            'definition': definition if definition in ['hd', 'sd'] else 'none'
         }
         videos_info.append(video_info)
     return videos_info
@@ -82,12 +95,12 @@ def fetch_and_store_videos(query, max_results):
                 break
             request = youtube.search().list_next(request, response)
 
-        video_details, failed_ids = get_video_details(video_ids, max_results)
-        success_count = add_video_details(
-            cursor, video_details, query)
+        video_details, failed_ids = get_video_details(
+            cursor, video_ids, max_results)
+        success_count = add_video_details(cursor, video_details, query)
         conn.commit()
         print(
-            f"Total processed: {len(video_ids)}, Successfully inserted: {success_count}.")
+            f"Total processed: {len(video_ids)}, Successfully inserted: {success_count}, Failed due to low resolution or errors: {len(failed_ids)}")
     except Exception as e:
         print(f"Error during fetching and storing videos: {e}")
     finally:
