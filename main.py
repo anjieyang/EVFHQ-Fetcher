@@ -92,16 +92,27 @@ def parse_video_details(details_response):
 def fetch_and_store_videos(query, max_results):
     conn = connect_db()
     cursor = conn.cursor()
+
+    cursor.execute(
+        "SELECT last_page_token FROM fetch_status WHERE query = %s", (query,))
+    last_page_token = cursor.fetchone()
+    if last_page_token:
+        last_page_token = last_page_token[0]
+
     try:
         video_ids = []
-        request = youtube.search().list(part="snippet", maxResults=50, q=query, type='video')
+        request = youtube.search().list(part="snippet", maxResults=50, q=query,
+                                        type='video', pageToken=last_page_token)
         while request and len(video_ids) < max_results:
             response = request.execute()
             video_ids.extend([item['id']['videoId']
                              for item in response.get('items', [])])
+            request = youtube.search().list_next(request, response)
             if len(video_ids) >= max_results:
                 break
-            request = youtube.search().list_next(request, response)
+
+        new_page_token = response.get('nextPageToken')
+        cursor.execute("INSERT INTO fetch_status (query, last_page_token) VALUES (%s, %s) ON CONFLICT (query) DO UPDATE SET last_page_token = EXCLUDED.last_page_token, last_fetch = NOW()", (query, new_page_token))
 
         video_details, failed_ids = get_video_details(
             cursor, video_ids, max_results)
